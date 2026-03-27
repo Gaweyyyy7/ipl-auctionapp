@@ -15,7 +15,20 @@ const io = new Server(server, {
   },
 });
 
-const rooms = {};
+const IPL_TEAMS = [
+  "Chennai Super Kings",
+  "Delhi Capitals",
+  "Gujarat Titans",
+  "Kolkata Knight Riders",
+  "Lucknow Super Giants",
+  "Mumbai Indians",
+  "Punjab Kings",
+  "Rajasthan Royals",
+  "Royal Challengers Bengaluru",
+  "Sunrisers Hyderabad",
+];
+
+const STARTING_PURSE = 125;
 
 const auctionPlayers = [
   { id: 1, name: "Virat Kohli", role: "Batsman", basePrice: 2 },
@@ -23,10 +36,33 @@ const auctionPlayers = [
   { id: 3, name: "Jasprit Bumrah", role: "Bowler", basePrice: 2 },
   { id: 4, name: "Andre Russell", role: "All-Rounder", basePrice: 2 },
   { id: 5, name: "Rohit Sharma", role: "Batsman", basePrice: 2 },
+  { id: 6, name: "KL Rahul", role: "Wicketkeeper", basePrice: 2 },
+  { id: 7, name: "Rashid Khan", role: "Bowler", basePrice: 2 },
+  { id: 8, name: "Shubman Gill", role: "Batsman", basePrice: 2 },
+  { id: 9, name: "Suryakumar Yadav", role: "Batsman", basePrice: 2 },
+  { id: 10, name: "Ruturaj Gaikwad", role: "Batsman", basePrice: 1.5 },
 ];
+
+const rooms = {};
 
 function generateRoomCode() {
   return Math.random().toString(36).substring(2, 7).toUpperCase();
+}
+
+function getAvailableTeams(room) {
+  const taken = room.players.map((p) => p.franchise);
+  return IPL_TEAMS.filter((team) => !taken.includes(team));
+}
+
+function emitRoomUpdate(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return;
+
+  io.to(roomCode).emit("players_update", {
+    players: room.players,
+    availableTeams: getAvailableTeams(room),
+    franchises: room.franchises,
+  });
 }
 
 function startTimer(roomCode) {
@@ -35,66 +71,69 @@ function startTimer(roomCode) {
 
   let timeLeft = 10;
 
-  if (room.timer) {
-    clearInterval(room.timer);
-  }
+  if (room.timer) clearInterval(room.timer);
 
   io.to(roomCode).emit("timer_update", timeLeft);
 
   room.timer = setInterval(() => {
-    timeLeft--;
-
+    timeLeft -= 1;
     io.to(roomCode).emit("timer_update", timeLeft);
 
     if (timeLeft <= 0) {
       clearInterval(room.timer);
       room.timer = null;
 
-      // SOLD logic
-      if (room.highestBidder) {
-        const player = auctionPlayers[room.currentPlayerIndex];
-        const team = room.teams[room.highestBidder];
+      const currentPlayer = auctionPlayers[room.currentPlayerIndex];
 
-        if (team && team.purse >= room.currentBid) {
-          team.purse -= room.currentBid;
-          team.squad.push(player.name);
+      if (room.highestBidderFranchise) {
+        const franchise = room.franchises[room.highestBidderFranchise];
+
+        if (franchise && franchise.purse >= room.currentBid) {
+          franchise.purse -= room.currentBid;
+          franchise.players.push({
+            name: currentPlayer.name,
+            role: currentPlayer.role,
+            price: room.currentBid,
+          });
         }
 
         io.to(roomCode).emit("player_sold", {
-          player: player.name,
-          winner: room.highestBidder,
+          player: currentPlayer.name,
+          role: currentPlayer.role,
+          winner: room.highestBidderFranchise,
           price: room.currentBid,
-          teams: room.teams,
+          franchises: room.franchises,
         });
       } else {
         io.to(roomCode).emit("player_unsold", {
-          player: auctionPlayers[room.currentPlayerIndex].name,
+          player: currentPlayer.name,
         });
       }
 
-      // move to next player automatically after 2 seconds
       setTimeout(() => {
-        const currentRoom = rooms[roomCode];
-        if (!currentRoom) return;
+        const updatedRoom = rooms[roomCode];
+        if (!updatedRoom) return;
 
-        currentRoom.currentPlayerIndex++;
+        updatedRoom.currentPlayerIndex += 1;
 
-        if (currentRoom.currentPlayerIndex >= auctionPlayers.length) {
+        if (updatedRoom.currentPlayerIndex >= auctionPlayers.length) {
           io.to(roomCode).emit("auction_finished", {
-            teams: currentRoom.teams,
+            franchises: updatedRoom.franchises,
           });
           return;
         }
 
-        const next = auctionPlayers[currentRoom.currentPlayerIndex];
-        currentRoom.currentBid = next.basePrice;
-        currentRoom.highestBidder = null;
+        const nextPlayer = auctionPlayers[updatedRoom.currentPlayerIndex];
+        updatedRoom.currentBid = nextPlayer.basePrice;
+        updatedRoom.highestBidder = null;
+        updatedRoom.highestBidderFranchise = null;
 
         io.to(roomCode).emit("next_player_started", {
-          currentPlayer: next,
-          currentBid: currentRoom.currentBid,
+          currentPlayer: nextPlayer,
+          currentBid: updatedRoom.currentBid,
           highestBidder: null,
-          teams: currentRoom.teams,
+          highestBidderFranchise: null,
+          franchises: updatedRoom.franchises,
         });
 
         startTimer(roomCode);
@@ -106,20 +145,40 @@ function startTimer(roomCode) {
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  socket.on("create_room", (username) => {
+  socket.on("create_room", ({ username, franchise }) => {
+    if (!username?.trim() || !franchise?.trim()) {
+      socket.emit("join_error", "Team owner name and franchise are required");
+      return;
+    }
+
+    if (!IPL_TEAMS.includes(franchise)) {
+      socket.emit("join_error", "Invalid franchise selected");
+      return;
+    }
+
     const roomCode = generateRoomCode();
 
     rooms[roomCode] = {
-      players: [{ id: socket.id, name: username }],
+      players: [
+        {
+          id: socket.id,
+          name: username.trim(),
+          franchise,
+        },
+      ],
       host: socket.id,
       auctionStarted: false,
       currentPlayerIndex: 0,
       currentBid: 0,
       highestBidder: null,
-      teams: {
-        [username]: { purse: 10, squad: [] },
-      },
+      highestBidderFranchise: null,
       timer: null,
+      franchises: {
+        [franchise]: {
+          purse: STARTING_PURSE,
+          players: [],
+        },
+      },
     };
 
     socket.join(roomCode);
@@ -128,10 +187,14 @@ io.on("connection", (socket) => {
       roomCode,
       players: rooms[roomCode].players,
       hostId: socket.id,
+      availableTeams: getAvailableTeams(rooms[roomCode]),
+      franchises: rooms[roomCode].franchises,
     });
+
+    emitRoomUpdate(roomCode);
   });
 
-  socket.on("join_room", ({ roomCode, username }) => {
+  socket.on("join_room", ({ roomCode, username, franchise }) => {
     const room = rooms[roomCode];
 
     if (!room) {
@@ -139,22 +202,49 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (room.players.length >= 4) {
-      socket.emit("join_error", "Room full");
+    if (!username?.trim() || !franchise?.trim()) {
+      socket.emit("join_error", "Team owner name and franchise are required");
       return;
     }
 
-    room.players.push({ id: socket.id, name: username });
-    room.teams[username] = { purse: 10, squad: [] };
+    if (room.players.length >= 10) {
+      socket.emit("join_error", "All franchises are already taken");
+      return;
+    }
+
+    if (!IPL_TEAMS.includes(franchise)) {
+      socket.emit("join_error", "Invalid franchise selected");
+      return;
+    }
+
+    const franchiseTaken = room.players.some((p) => p.franchise === franchise);
+    if (franchiseTaken) {
+      socket.emit("join_error", "That franchise is already taken");
+      return;
+    }
+
+    room.players.push({
+      id: socket.id,
+      name: username.trim(),
+      franchise,
+    });
+
+    room.franchises[franchise] = {
+      purse: STARTING_PURSE,
+      players: [],
+    };
+
     socket.join(roomCode);
 
     socket.emit("join_success", {
       roomCode,
       players: room.players,
       hostId: room.host,
+      availableTeams: getAvailableTeams(room),
+      franchises: room.franchises,
     });
 
-    io.to(roomCode).emit("players_update", room.players);
+    emitRoomUpdate(roomCode);
   });
 
   socket.on("start_auction", (roomCode) => {
@@ -174,12 +264,14 @@ io.on("connection", (socket) => {
     room.currentPlayerIndex = 0;
     room.currentBid = auctionPlayers[0].basePrice;
     room.highestBidder = null;
+    room.highestBidderFranchise = null;
 
     io.to(roomCode).emit("auction_started", {
       currentPlayer: auctionPlayers[0],
       currentBid: room.currentBid,
-      highestBidder: room.highestBidder,
-      teams: room.teams,
+      highestBidder: null,
+      highestBidderFranchise: null,
+      franchises: room.franchises,
     });
 
     startTimer(roomCode);
@@ -192,31 +284,29 @@ io.on("connection", (socket) => {
     const bidder = room.players.find((p) => p.id === socket.id);
     if (!bidder) return;
 
-    const bidderTeam = room.teams[bidder.name];
-    if (!bidderTeam) return;
-
+    const bidderFranchise = room.franchises[bidder.franchise];
     const nextBid = room.currentBid + 0.5;
 
-    // do not allow bid if purse not enough
-    if (bidderTeam.purse < nextBid) {
+    if (!bidderFranchise || bidderFranchise.purse < nextBid) {
       socket.emit("join_error", "Not enough purse for this bid");
       return;
     }
 
     room.currentBid = nextBid;
     room.highestBidder = bidder.name;
+    room.highestBidderFranchise = bidder.franchise;
 
     io.to(roomCode).emit("bid_updated", {
       currentPlayer: auctionPlayers[room.currentPlayerIndex],
       currentBid: room.currentBid,
       highestBidder: room.highestBidder,
-      teams: room.teams,
+      highestBidderFranchise: room.highestBidderFranchise,
+      franchises: room.franchises,
     });
   });
 
   socket.on("next_player", (roomCode) => {
     const room = rooms[roomCode];
-
     if (!room) return;
     if (room.host !== socket.id) return;
 
@@ -225,24 +315,26 @@ io.on("connection", (socket) => {
       room.timer = null;
     }
 
-    room.currentPlayerIndex++;
+    room.currentPlayerIndex += 1;
 
     if (room.currentPlayerIndex >= auctionPlayers.length) {
       io.to(roomCode).emit("auction_finished", {
-        teams: room.teams,
+        franchises: room.franchises,
       });
       return;
     }
 
-    const next = auctionPlayers[room.currentPlayerIndex];
-    room.currentBid = next.basePrice;
+    const nextPlayer = auctionPlayers[room.currentPlayerIndex];
+    room.currentBid = nextPlayer.basePrice;
     room.highestBidder = null;
+    room.highestBidderFranchise = null;
 
     io.to(roomCode).emit("next_player_started", {
-      currentPlayer: next,
+      currentPlayer: nextPlayer,
       currentBid: room.currentBid,
-      highestBidder: room.highestBidder,
-      teams: room.teams,
+      highestBidder: null,
+      highestBidderFranchise: null,
+      franchises: room.franchises,
     });
 
     startTimer(roomCode);
@@ -251,15 +343,19 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     for (const roomCode in rooms) {
       const room = rooms[roomCode];
-      room.players = room.players.filter((player) => player.id !== socket.id);
+
+      const disconnectedPlayer = room.players.find((p) => p.id === socket.id);
+      room.players = room.players.filter((p) => p.id !== socket.id);
+
+      if (disconnectedPlayer) {
+        delete room.franchises[disconnectedPlayer.franchise];
+      }
 
       if (room.players.length === 0) {
-        if (room.timer) {
-          clearInterval(room.timer);
-        }
+        if (room.timer) clearInterval(room.timer);
         delete rooms[roomCode];
       } else {
-        io.to(roomCode).emit("players_update", room.players);
+        emitRoomUpdate(roomCode);
       }
     }
   });
@@ -267,6 +363,10 @@ io.on("connection", (socket) => {
 
 app.get("/", (req, res) => {
   res.send("Server is running");
+});
+
+app.get("/ipl-teams", (req, res) => {
+  res.json(IPL_TEAMS);
 });
 
 server.listen(5000, () => {
