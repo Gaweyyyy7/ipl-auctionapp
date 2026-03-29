@@ -29,18 +29,24 @@ const IPL_TEAMS = [
 ];
 
 const STARTING_PURSE = 125;
+const AUCTION_TIME = 7;
 
 const auctionPlayers = [
-  { id: 1, name: "Virat Kohli", role: "Batsman", basePrice: 2 },
-  { id: 2, name: "MS Dhoni", role: "Wicketkeeper", basePrice: 1.5 },
-  { id: 3, name: "Jasprit Bumrah", role: "Bowler", basePrice: 2 },
-  { id: 4, name: "Andre Russell", role: "All-Rounder", basePrice: 2 },
-  { id: 5, name: "Rohit Sharma", role: "Batsman", basePrice: 2 },
-  { id: 6, name: "KL Rahul", role: "Wicketkeeper", basePrice: 2 },
-  { id: 7, name: "Rashid Khan", role: "Bowler", basePrice: 2 },
-  { id: 8, name: "Shubman Gill", role: "Batsman", basePrice: 2 },
-  { id: 9, name: "Suryakumar Yadav", role: "Batsman", basePrice: 2 },
-  { id: 10, name: "Ruturaj Gaikwad", role: "Batsman", basePrice: 1.5 },
+  { id: 1, name: "Virat Kohli", role: "Batsman", overseas: "Local", basePrice: 2 },
+  { id: 2, name: "MS Dhoni", role: "Wicketkeeper", overseas: "Local", basePrice: 1.5 },
+  { id: 3, name: "Jasprit Bumrah", role: "Bowler", overseas: "Local", basePrice: 2 },
+  { id: 4, name: "Andre Russell", role: "All-Rounder", overseas: "Overseas", basePrice: 2 },
+  { id: 5, name: "Rohit Sharma", role: "Batsman", overseas: "Local", basePrice: 2 },
+  { id: 6, name: "KL Rahul", role: "Wicketkeeper", overseas: "Local", basePrice: 2 },
+  { id: 7, name: "Rashid Khan", role: "Bowler", overseas: "Overseas", basePrice: 2 },
+  { id: 8, name: "Shubman Gill", role: "Batsman", overseas: "Local", basePrice: 2 },
+  { id: 9, name: "Suryakumar Yadav", role: "Batsman", overseas: "Local", basePrice: 2 },
+  { id: 10, name: "Ruturaj Gaikwad", role: "Batsman", overseas: "Local", basePrice: 1.5 },
+  { id: 11, name: "Jos Buttler", role: "Wicketkeeper", overseas: "Overseas", basePrice: 2 },
+  { id: 12, name: "Pat Cummins", role: "Bowler", overseas: "Overseas", basePrice: 2 },
+  { id: 13, name: "Hardik Pandya", role: "All-Rounder", overseas: "Local", basePrice: 2 },
+  { id: 14, name: "Trent Boult", role: "Bowler", overseas: "Overseas", basePrice: 1.5 },
+  { id: 15, name: "Nicholas Pooran", role: "Wicketkeeper", overseas: "Overseas", basePrice: 1.5 },
 ];
 
 const rooms = {};
@@ -50,8 +56,8 @@ function generateRoomCode() {
 }
 
 function getAvailableTeams(room) {
-  const taken = room.players.map((p) => p.franchise);
-  return IPL_TEAMS.filter((team) => !taken.includes(team));
+  const takenTeams = room.players.map((player) => player.franchise);
+  return IPL_TEAMS.filter((team) => !takenTeams.includes(team));
 }
 
 function emitRoomUpdate(roomCode) {
@@ -69,30 +75,32 @@ function startTimer(roomCode) {
   const room = rooms[roomCode];
   if (!room) return;
 
-  let timeLeft = 10;
+  if (room.timer) {
+    clearInterval(room.timer);
+  }
 
-  if (room.timer) clearInterval(room.timer);
-
-  io.to(roomCode).emit("timer_update", timeLeft);
+  room.timeLeft = AUCTION_TIME;
+  io.to(roomCode).emit("timer_update", room.timeLeft);
 
   room.timer = setInterval(() => {
-    timeLeft -= 1;
-    io.to(roomCode).emit("timer_update", timeLeft);
+    room.timeLeft -= 1;
+    io.to(roomCode).emit("timer_update", room.timeLeft);
 
-    if (timeLeft <= 0) {
+    if (room.timeLeft <= 0) {
       clearInterval(room.timer);
       room.timer = null;
 
       const currentPlayer = auctionPlayers[room.currentPlayerIndex];
 
       if (room.highestBidderFranchise) {
-        const franchise = room.franchises[room.highestBidderFranchise];
+        const franchiseData = room.franchises[room.highestBidderFranchise];
 
-        if (franchise && franchise.purse >= room.currentBid) {
-          franchise.purse -= room.currentBid;
-          franchise.players.push({
+        if (franchiseData && franchiseData.purse >= room.currentBid) {
+          franchiseData.purse -= room.currentBid;
+          franchiseData.players.push({
             name: currentPlayer.name,
             role: currentPlayer.role,
+            overseas: currentPlayer.overseas,
             price: room.currentBid,
           });
         }
@@ -100,6 +108,7 @@ function startTimer(roomCode) {
         io.to(roomCode).emit("player_sold", {
           player: currentPlayer.name,
           role: currentPlayer.role,
+          overseas: currentPlayer.overseas,
           winner: room.highestBidderFranchise,
           price: room.currentBid,
           franchises: room.franchises,
@@ -127,6 +136,7 @@ function startTimer(roomCode) {
         updatedRoom.currentBid = nextPlayer.basePrice;
         updatedRoom.highestBidder = null;
         updatedRoom.highestBidderFranchise = null;
+        updatedRoom.timeLeft = AUCTION_TIME;
 
         io.to(roomCode).emit("next_player_started", {
           currentPlayer: nextPlayer,
@@ -146,12 +156,15 @@ io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   socket.on("create_room", ({ username, franchise }) => {
-    if (!username?.trim() || !franchise?.trim()) {
-      socket.emit("join_error", "Team owner name and franchise are required");
+    const cleanName = username?.trim();
+    const cleanFranchise = franchise?.trim();
+
+    if (!cleanName || !cleanFranchise) {
+      socket.emit("join_error", "Owner name and franchise are required");
       return;
     }
 
-    if (!IPL_TEAMS.includes(franchise)) {
+    if (!IPL_TEAMS.includes(cleanFranchise)) {
       socket.emit("join_error", "Invalid franchise selected");
       return;
     }
@@ -162,8 +175,8 @@ io.on("connection", (socket) => {
       players: [
         {
           id: socket.id,
-          name: username.trim(),
-          franchise,
+          name: cleanName,
+          franchise: cleanFranchise,
         },
       ],
       host: socket.id,
@@ -173,8 +186,9 @@ io.on("connection", (socket) => {
       highestBidder: null,
       highestBidderFranchise: null,
       timer: null,
+      timeLeft: AUCTION_TIME,
       franchises: {
-        [franchise]: {
+        [cleanFranchise]: {
           purse: STARTING_PURSE,
           players: [],
         },
@@ -196,28 +210,28 @@ io.on("connection", (socket) => {
 
   socket.on("join_room", ({ roomCode, username, franchise }) => {
     const room = rooms[roomCode];
+    const cleanName = username?.trim();
+    const cleanFranchise = franchise?.trim();
 
     if (!room) {
       socket.emit("join_error", "Room not found");
       return;
     }
 
-    if (!username?.trim() || !franchise?.trim()) {
-      socket.emit("join_error", "Team owner name and franchise are required");
+    if (!cleanName || !cleanFranchise) {
+      socket.emit("join_error", "Owner name and franchise are required");
       return;
     }
 
-    if (room.players.length >= 10) {
-      socket.emit("join_error", "All franchises are already taken");
-      return;
-    }
-
-    if (!IPL_TEAMS.includes(franchise)) {
+    if (!IPL_TEAMS.includes(cleanFranchise)) {
       socket.emit("join_error", "Invalid franchise selected");
       return;
     }
 
-    const franchiseTaken = room.players.some((p) => p.franchise === franchise);
+    const franchiseTaken = room.players.some(
+      (player) => player.franchise === cleanFranchise
+    );
+
     if (franchiseTaken) {
       socket.emit("join_error", "That franchise is already taken");
       return;
@@ -225,11 +239,11 @@ io.on("connection", (socket) => {
 
     room.players.push({
       id: socket.id,
-      name: username.trim(),
-      franchise,
+      name: cleanName,
+      franchise: cleanFranchise,
     });
 
-    room.franchises[franchise] = {
+    room.franchises[cleanFranchise] = {
       purse: STARTING_PURSE,
       players: [],
     };
@@ -265,6 +279,7 @@ io.on("connection", (socket) => {
     room.currentBid = auctionPlayers[0].basePrice;
     room.highestBidder = null;
     room.highestBidderFranchise = null;
+    room.timeLeft = AUCTION_TIME;
 
     io.to(roomCode).emit("auction_started", {
       currentPlayer: auctionPlayers[0],
@@ -281,13 +296,18 @@ io.on("connection", (socket) => {
     const room = rooms[roomCode];
     if (!room || !room.auctionStarted) return;
 
-    const bidder = room.players.find((p) => p.id === socket.id);
+    const bidder = room.players.find((player) => player.id === socket.id);
     if (!bidder) return;
 
-    const bidderFranchise = room.franchises[bidder.franchise];
+    if (room.highestBidderFranchise === bidder.franchise) {
+      socket.emit("join_error", "You are already the highest bidder! Wait for someone else to bid.");
+      return;
+    }
+
+    const bidderFranchiseData = room.franchises[bidder.franchise];
     const nextBid = room.currentBid + 0.5;
 
-    if (!bidderFranchise || bidderFranchise.purse < nextBid) {
+    if (!bidderFranchiseData || bidderFranchiseData.purse < nextBid) {
       socket.emit("join_error", "Not enough purse for this bid");
       return;
     }
@@ -295,6 +315,8 @@ io.on("connection", (socket) => {
     room.currentBid = nextBid;
     room.highestBidder = bidder.name;
     room.highestBidderFranchise = bidder.franchise;
+
+    startTimer(roomCode);
 
     io.to(roomCode).emit("bid_updated", {
       currentPlayer: auctionPlayers[room.currentPlayerIndex],
@@ -328,6 +350,7 @@ io.on("connection", (socket) => {
     room.currentBid = nextPlayer.basePrice;
     room.highestBidder = null;
     room.highestBidderFranchise = null;
+    room.timeLeft = AUCTION_TIME;
 
     io.to(roomCode).emit("next_player_started", {
       currentPlayer: nextPlayer,
@@ -344,15 +367,20 @@ io.on("connection", (socket) => {
     for (const roomCode in rooms) {
       const room = rooms[roomCode];
 
-      const disconnectedPlayer = room.players.find((p) => p.id === socket.id);
-      room.players = room.players.filter((p) => p.id !== socket.id);
+      const disconnectedPlayer = room.players.find(
+        (player) => player.id === socket.id
+      );
+
+      room.players = room.players.filter((player) => player.id !== socket.id);
 
       if (disconnectedPlayer) {
         delete room.franchises[disconnectedPlayer.franchise];
       }
 
       if (room.players.length === 0) {
-        if (room.timer) clearInterval(room.timer);
+        if (room.timer) {
+          clearInterval(room.timer);
+        }
         delete rooms[roomCode];
       } else {
         emitRoomUpdate(roomCode);
@@ -363,10 +391,6 @@ io.on("connection", (socket) => {
 
 app.get("/", (req, res) => {
   res.send("Server is running");
-});
-
-app.get("/ipl-teams", (req, res) => {
-  res.json(IPL_TEAMS);
 });
 
 server.listen(5000, () => {
