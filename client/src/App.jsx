@@ -17,10 +17,10 @@ const IPL_TEAMS = [
 ];
 
 const ROLE_COLORS = {
-  "Batsman": { bg: "#1a5c9c", text: "#87CEEB", abbr: "BAT" },
-  "Wicketkeeper": { bg: "#5c1a1a", text: "#ff9999", abbr: "WK" },
-  "Bowler": { bg: "#1a5c2a", text: "#90ee90", abbr: "BOW" },
-  "All-Rounder": { bg: "#5c3d1a", text: "#ffd700", abbr: "AR" },
+  "Batsman": { bg: "#1a5c9c", text: "#87CEEB", abbr: "BAT", emoji: "🏏" },
+  "Wicketkeeper": { bg: "#5c1a1a", text: "#ff9999", abbr: "WK", emoji: "🧤" },
+  "Bowler": { bg: "#1a5c2a", text: "#90ee90", abbr: "BOW", emoji: "🎾" },
+  "All-Rounder": { bg: "#5c3d1a", text: "#ffd700", abbr: "AR", emoji: "⭐" },
 };
 
 const TEAM_THEMES = {
@@ -460,25 +460,43 @@ function App() {
                               Players bought: {franchiseData.players.length}
                             </p>
                             {franchiseData.players.length > 0 && (
-                              <div style={{ margin: "6px 0" }}>
-                                {franchiseData.players.map((p, i) => {
-                                  const roleColors = ROLE_COLORS[p.role] || { bg: "#333", text: "#999", abbr: "?" };
+                              <div style={{ margin: "12px 0" }}>
+                                {["Batsman", "Wicketkeeper", "Bowler", "All-Rounder"].map((role) => {
+                                  const playersInRole = franchiseData.players.filter(p => p.role === role);
+                                  const roleColors = ROLE_COLORS[role];
+                                  if (playersInRole.length === 0) return null;
                                   return (
-                                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px", margin: "8px 0", fontSize: "12px", color: "#aaa" }}>
-                                      <span style={{
-                                        background: roleColors.bg,
-                                        color: roleColors.text,
-                                        padding: "2px 6px",
-                                        borderRadius: "4px",
-                                        fontWeight: "bold",
-                                        minWidth: "32px",
-                                        textAlign: "center",
+                                    <div key={role} style={{ marginBottom: "12px" }}>
+                                      <div style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        marginBottom: "8px",
+                                        paddingBottom: "6px",
+                                        borderBottom: `1px solid ${roleColors.bg}33`,
                                       }}>
-                                        {roleColors.abbr}
-                                      </span>
-                                      <span>{p.name}</span>
-                                      <span style={{ color: "#666" }}>—</span>
-                                      <span style={{ color: "#28a745" }}>Rs.{p.price} Cr</span>
+                                        <span style={{ fontSize: "18px" }}>{roleColors.emoji}</span>
+                                        <span style={{
+                                          background: roleColors.bg,
+                                          color: roleColors.text,
+                                          padding: "3px 8px",
+                                          borderRadius: "4px",
+                                          fontWeight: "bold",
+                                          fontSize: "11px",
+                                          textTransform: "uppercase",
+                                        }}>
+                                          {roleColors.abbr}
+                                        </span>
+                                        <span style={{ fontSize: "12px", color: "#999" }}>({playersInRole.length})</span>
+                                      </div>
+                                      {playersInRole.map((p, i) => (
+                                        <div key={`${role}-${i}`} style={{ display: "flex", alignItems: "center", gap: "8px", margin: "6px 0", fontSize: "12px", color: "#aaa", paddingLeft: "26px" }}>
+                                          <span>{roleColors.emoji}</span>
+                                          <span>{p.name}</span>
+                                          <span style={{ color: "#666" }}>—</span>
+                                          <span style={{ color: "#28a745", fontWeight: "bold" }}>Rs.{p.price} Cr</span>
+                                        </div>
+                                      ))}
                                     </div>
                                   );
                                 })}
@@ -660,12 +678,17 @@ function App() {
                                   <span style={{
                                     background: roleColors.bg,
                                     color: roleColors.text,
-                                    padding: "2px 6px",
+                                    padding: "3px 8px",
                                     borderRadius: "4px",
                                     fontWeight: "bold",
                                     fontSize: "11px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    width: "fit-content",
                                   }}>
-                                    {player.role}
+                                    <span>{roleColors.emoji}</span>
+                                    {roleColors.abbr}
                                   </span>
                                 </td>
                                 <td style={{ paddingTop: "4px", fontSize: "12px", color: "#999" }}>{player.overseas}</td>
