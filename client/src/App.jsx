@@ -439,9 +439,15 @@ function App() {
                                   color: theme?.abbrText || "white",
                                   fontSize: "10px",
                                   fontWeight: "bold",
-                                  padding: "2px 6px",
+                                  padding: "4px 8px",
                                   borderRadius: "4px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "4px",
                                 }}>
+                                  {theme?.logo && (
+                                    <img src={theme.logo} alt={player.franchise} style={{ width: "14px", height: "14px", objectFit: "contain" }} />
+                                  )}
                                   {theme?.abbr || "?"}
                                 </span>
                                 <span style={{ fontSize: "13px", color: "#aaa" }}>{player.franchise}</span>
@@ -649,7 +655,19 @@ function App() {
                 <div key={team} style={{ marginBottom: "18px", paddingBottom: "12px", borderBottom: "1px solid #333" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
                     {theme?.logo && (
-                      <img src={theme.logo} alt={team} style={{ width: "32px", height: "32px", objectFit: "contain" }} />
+                      <div style={{
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "50%",
+                        background: theme.color,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        border: `2px solid ${theme.secondaryColor}`,
+                      }}>
+                        <img src={theme.logo} alt={team} style={{ width: "28px", height: "28px", objectFit: "contain" }} />
+                      </div>
                     )}
                     <span style={{ fontWeight: "bold", fontSize: "16px", color: theme?.color || "white" }}>{team}</span>
                   </div>
