@@ -30,7 +30,7 @@ const TEAM_THEMES = {
     abbr: "CSK",
     abbrBg: "#FFD700",
     abbrText: "#0A2463",
-    logo: "https://upload.wikimedia.org/wikipedia/en/2/2b/Chennai_Super_Kings_Logo.svg",
+    logo: "/logos/csk.svg",
   },
   "Delhi Capitals": {
     color: "#004C97",
@@ -78,7 +78,7 @@ const TEAM_THEMES = {
     abbr: "PBKS",
     abbrBg: "#C41E3A",
     abbrText: "#FFD700",
-    logo: "https://upload.wikimedia.org/wikipedia/en/d/d4/Punjab_Kings_Logo_2021.svg",
+    logo: "/logos/pbks.svg",
   },
   "Rajasthan Royals": {
     color: "#E8447A",
@@ -102,7 +102,7 @@ const TEAM_THEMES = {
     abbr: "SRH",
     abbrBg: "#FF822A",
     abbrText: "#000000",
-    logo: "https://upload.wikimedia.org/wikipedia/en/3/3e/Sunrisers_Hyderabad.svg",
+    logo: "/logos/srh.svg",
   },
 };
 

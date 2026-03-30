@@ -1,4 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <circle cx="100" cy="100" r="95" fill="#FFD700" stroke="#0A2463" stroke-width="2"/>
-  <text x="100" y="120" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#0A2463">CSK</text>
+  <!-- Circle background - Yellow (CSK color) -->
+  <circle cx="100" cy="100" r="95" fill="#FFD700" stroke="#0A2463" stroke-width="3"/>
+  
+  <!-- Lion Head (Orange) -->
+  <circle cx="70" cy="85" r="22" fill="#FF8C00" stroke="#FFA500" stroke-width="1"/>
+  
+  <!-- Mane -->
+  <path d="M 50 75 Q 45 65 55 60 Q 65 55 75 62" fill="#FF6B35" stroke="#FF6B35" stroke-width="1"/>
+  <path d="M 75 55 Q 85 50 95 55" fill="#FF6B35" stroke="#FF6B35" stroke-width="1"/>
+  
+  <!-- Lion mouth/jaw -->
+  <ellipse cx="70" cy="95" rx="8" ry="10" fill="#FFA500"/>
+  
+  <!-- Fangs -->
+  <polygon points="65,100 62,108 68,103" fill="#FFD700"/>
+  <polygon points="75,100 78,108 72,103" fill="#FFD700"/>
+  
+  <!-- Crown (Blue) -->
+  <path d="M 85 65 L 90 50 L 95 65 L 100 50 L 105 65 L 110 50 L 115 65" fill="#0A2463" stroke="#0A2463" stroke-width="1"/>
+  <rect x="85" y="65" width="30" height="8" fill="#0A2463"/>
+  
+  <!-- Text circles for CSK -->
+  <circle cx="100" cy="130" r="6" fill="#0A2463"/>
+  <circle cx="110" cy="130" r="6" fill="#0A2463"/>
+  
+  <!-- CSK Text -->
+  <text x="100" y="165" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#0A2463">CSK</text>
 </svg>

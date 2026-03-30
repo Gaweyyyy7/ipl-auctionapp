@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Circle background -->
+  <circle cx="100" cy="100" r="95" fill="#FF822A" stroke="#000000" stroke-width="2"/>
+  
+  <!-- Left wing -->
+  <path d="M 60 85 Q 45 80 50 100 Q 55 90 65 92 Z" fill="#FFD700"/>
+  <path d="M 55 92 Q 40 90 45 110 Q 50 100 60 102 Z" fill="#FFD700"/>
+  
+  <!-- Right wing -->
+  <path d="M 140 85 Q 155 80 150 100 Q 145 90 135 92 Z" fill="#FFD700"/>
+  <path d="M 145 92 Q 160 90 155 110 Q 150 100 140 102 Z" fill="#FFD700"/>
+  
+  <!-- Sun center -->
+  <circle cx="100" cy="85" r="18" fill="#FFA500" stroke="#CC0000" stroke-width="1"/>
+  
+  <!-- Eagle head -->
+  <circle cx="100" cy="105" r="12" fill="#CC0000"/>
+  
+  <!-- Beak -->
+  <polygon points="110,105 125,103 110,107" fill="#FFD700"/>
+  
+  <!-- SRH text -->
+  <text x="100" y="160" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">SRH</text>
+</svg>
