@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Circle background - Blue (MI color) -->
+  <circle cx="100" cy="100" r="95" fill="#004BA0" stroke="#D4AF37" stroke-width="3"/>
+  
+  <!-- Flame center - Yellow -->
+  <circle cx="100" cy="85" r="20" fill="#FFD700"/>
+  
+  <!-- Orange flame -->
+  <path d="M 85 75 Q 75 60 85 45 Q 95 55 100 45 Q 105 55 115 45 Q 125 60 115 75 Z" fill="#FF6B35"/>
+  
+  <!-- Red flame -->
+  <path d="M 90 70 Q 85 55 92 40 Q 100 50 100 40 Q 100 50 108 40 Q 115 55 110 70 Z" fill="#DC143C"/>
+  
+  <!-- Blue flame -->
+  <path d="M 95 75 Q 92 58 98 42 Q 100 52 100 42 Q 100 52 102 42 Q 108 58 105 75 Z" fill="#003DA5"/>
+  
+  <!-- Green accent -->
+  <ellipse cx="100" cy="95" rx="8" ry="12" fill="#2D5016" opacity="0.6"/>
+  
+  <!-- MI Text -->
+  <text x="100" y="160" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#FFD700">MI</text>
+</svg>

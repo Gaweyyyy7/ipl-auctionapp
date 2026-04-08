@@ -1,5 +1,9 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import PlayersTab from "./components/PlayersTab";
+import ChatTab from "./components/ChatTab";
+import AuctionPanel from "./components/AuctionPanel";
+import FranchiseTable from "./components/FranchiseTable";
 
 const socket = io("http://localhost:5000");
 
@@ -23,6 +27,32 @@ const ROLE_COLORS = {
   "All-Rounder": { bg: "#5c3d1a", text: "#ffd700", abbr: "AR", emoji: "⭐" },
 };
 
+const CELEBRATION_MESSAGES = [
+  "Welcome to the family! 🎊",
+  "Your new home awaits! 🏏",
+  "Let's bring home the trophy! 🏆",
+  "Time to shine at the crease! ⭐",
+  "Ready to make history! 🔥",
+  "A new star joins the army! 💪",
+  "Here comes the game changer! 💥",
+  "Welcome aboard the winning team! 🚀",
+  "Your journey begins here! 🎯",
+  "Time to create magic! ✨",
+];
+
+const TEAM_HASHTAGS = {
+  "Chennai Super Kings": ["#WelcomeToAnbuDen", "#YellowArmy", "#WhistlePodu"],
+  "Mumbai Indians": ["#DilDilMumbai", "#BlueArmy", "#OneFamily"],
+  "Kolkata Knight Riders": ["#KorboLorboJeetbo", "#PurpleAndGold", "#AmiKKR"],
+  "Royal Challengers Bengaluru": ["#PlayBold", "#EeSalaCupNamde", "#RedArmy"],
+  "Rajasthan Royals": ["#HallaBol", "#RoyalsFamily", "#PinkArmy"],
+  "Delhi Capitals": ["#DilWaliDilli", "#RoarKaro", "#BlueAndRed"],
+  "Punjab Kings": ["#SaddaPunjab", "#PunjabiVibe", "#KingsArmy"],
+  "Sunrisers Hyderabad": ["#OrangeArmy", "#RiseWithUs", "#SunrisersUnited"],
+  "Gujarat Titans": ["#AavaDe", "#TitansUnited", "#BlueAndGold"],
+  "Lucknow Super Giants": ["#JeetegaLucknow", "#SuperGiantArmy", "#LucknowKaJazbaa"],
+};
+
 const TEAM_THEMES = {
   "Chennai Super Kings": {
     color: "#FFD700",
@@ -30,7 +60,7 @@ const TEAM_THEMES = {
     abbr: "CSK",
     abbrBg: "#FFD700",
     abbrText: "#0A2463",
-    logo: "/logos/csk.svg",
+    logo: "/logos/csk.png",
   },
   "Delhi Capitals": {
     color: "#004C97",
@@ -38,7 +68,7 @@ const TEAM_THEMES = {
     abbr: "DC",
     abbrBg: "#004C97",
     abbrText: "#ffffff",
-    logo: "https://upload.wikimedia.org/wikipedia/en/c/c2/Delhi_Capitals_Logo.svg",
+    logo: "/logos/dc.png",
   },
   "Gujarat Titans": {
     color: "#1C4C9C",
@@ -49,28 +79,28 @@ const TEAM_THEMES = {
     logo: "https://upload.wikimedia.org/wikipedia/en/0/09/Gujarat_Titans_Logo.svg",
   },
   "Kolkata Knight Riders": {
-    color: "#B3862E",
-    secondaryColor: "#3A225D",
+    color: "#3A225D",
+    secondaryColor: "#B3862E",
     abbr: "KKR",
     abbrBg: "#3A225D",
     abbrText: "#B3862E",
-    logo: "https://upload.wikimedia.org/wikipedia/en/4/4c/Kolkata_Knight_Riders_Logo.svg",
+    logo: "logos/kolkata.png",
   },
   "Lucknow Super Giants": {
-    color: "#00B4D8",
-    secondaryColor: "#A72056",
+    color: "#9d0303",
+    secondaryColor: "#bcad00",
     abbr: "LSG",
     abbrBg: "#A72056",
     abbrText: "#00B4D8",
-    logo: "https://upload.wikimedia.org/wikipedia/en/b/b1/Lucknow_Super_Giants_IPL_Logo.svg",
-  },
+  logo: "/logos/lsg.png"  },
+
   "Mumbai Indians": {
     color: "#004BA0",
     secondaryColor: "#D4AF37",
     abbr: "MI",
     abbrBg: "#004BA0",
     abbrText: "#D4AF37",
-    logo: "https://upload.wikimedia.org/wikipedia/en/c/cd/Mumbai_Indians_Logo.svg",
+    logo: "/logos/mumbai.png",
   },
   "Punjab Kings": {
     color: "#C41E3A",
@@ -78,7 +108,7 @@ const TEAM_THEMES = {
     abbr: "PBKS",
     abbrBg: "#C41E3A",
     abbrText: "#FFD700",
-    logo: "/logos/pbks.svg",
+    logo: "/logos/punjk.png",
   },
   "Rajasthan Royals": {
     color: "#E8447A",
@@ -86,23 +116,23 @@ const TEAM_THEMES = {
     abbr: "RR",
     abbrBg: "#E8447A",
     abbrText: "#ffffff",
-    logo: "https://upload.wikimedia.org/wikipedia/en/6/60/Rajasthan_Royals_Logo.svg",
+    logo: "/logos/rr1.png",
   },
   "Royal Challengers Bengaluru": {
-    color: "#EC1C24",
-    secondaryColor: "#000000",
+    color: "#b40c12",
+    secondaryColor: "#b19a05",
     abbr: "RCB",
     abbrBg: "#EC1C24",
     abbrText: "#ffffff",
-    logo: "https://upload.wikimedia.org/wikipedia/en/2/2a/Royal_Challengers_Bangalore_2020.svg",
+    logo: "/logos/rcb.png",
   },
   "Sunrisers Hyderabad": {
-    color: "#FF822A",
+    color: "#c2590f",
     secondaryColor: "#000000",
     abbr: "SRH",
     abbrBg: "#FF822A",
     abbrText: "#000000",
-    logo: "/logos/srh.svg",
+    logo: "/logos/srh.png",
   },
 };
 
@@ -111,20 +141,24 @@ const STARTING_PURSE = 125;
 function App() {
   const [username, setUsername] = useState("");
   const [selectedFranchise, setSelectedFranchise] = useState("");
+  const [currentFranchise, setCurrentFranchise] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [joinedRoom, setJoinedRoom] = useState("");
   const [players, setPlayers] = useState([]);
   const [message, setMessage] = useState("");
   const [isHost, setIsHost] = useState(false);
   const [auctionStarted, setAuctionStarted] = useState(false);
-  const [activeTab, setActiveTab] = useState("squad");
+  const [activeTab, setActiveTab] = useState("players");
   const [expandedPlayer, setExpandedPlayer] = useState(null);
+  const [expandedFranchise, setExpandedFranchise] = useState(null);
 
   const [currentPlayer, setCurrentPlayer] = useState(null);
   const [currentBid, setCurrentBid] = useState(0);
   const [highestBidder, setHighestBidder] = useState("");
   const [highestBidderFranchise, setHighestBidderFranchise] = useState("");
   const [hostId, setHostId] = useState("");
+  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
+  const [auctionPlayers, setAuctionPlayers] = useState([]);
 
   const [timer, setTimer] = useState(7);
   const [franchises, setFranchises] = useState({});
@@ -132,24 +166,18 @@ function App() {
   const [pinnedMessage, setPinnedMessage] = useState("");
   const [pinnedFranchise, setPinnedFranchise] = useState("");
   const [feedMessages, setFeedMessages] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
 
-  const feedRef = useRef(null);
-
-  const addFeedMessage = (msg, type = "bid", franchise = "") => {
+  const addFeedMessage = (msg, type = "bid", franchise = "", username = "") => {
     setFeedMessages((prev) => {
       const updated = [
         ...prev,
-        { text: msg, type, franchise, time: new Date().toLocaleTimeString() },
+        { text: msg, type, franchise, username, time: new Date().toLocaleTimeString() },
       ];
       return updated.slice(-5);
     });
   };
-
-  useEffect(() => {
-    if (feedRef.current) {
-      feedRef.current.scrollTop = feedRef.current.scrollHeight;
-    }
-  }, [feedMessages]);
 
   useEffect(() => {
     socket.on("connect", () => {
@@ -160,100 +188,88 @@ function App() {
       setJoinedRoom(data.roomCode);
       setRoomCode(data.roomCode);
       setPlayers(data.players || []);
+      setIsHost(true);
+      setCurrentFranchise(data.franchise || selectedFranchise);
       setFranchises(data.franchises || {});
       setAvailableTeams(data.availableTeams || IPL_TEAMS);
-      setIsHost(true);
-      setHostId(data.hostId);
-      setMessage(`Room created: ${data.roomCode}`);
-      setPinnedMessage("");
-      setPinnedFranchise("");
+      setMessage("Room created successfully!");
     });
 
     socket.on("join_success", (data) => {
       setJoinedRoom(data.roomCode);
-      setRoomCode(data.roomCode);
       setPlayers(data.players || []);
+      setHostId(data.hostId);
+      setCurrentFranchise(data.franchise || selectedFranchise);
       setFranchises(data.franchises || {});
       setAvailableTeams(data.availableTeams || IPL_TEAMS);
-      setIsHost(socket.id === data.hostId);
-      setHostId(data.hostId);
-      setMessage(`Joined room: ${data.roomCode}`);
+      setMessage("Joined room successfully!");
+      setRoomCode("");
+      setSelectedFranchise("");
     });
 
     socket.on("players_update", (data) => {
-      setPlayers(data.players || []);
-      setAvailableTeams(data.availableTeams || IPL_TEAMS);
-      setFranchises(data.franchises || {});
+      setPlayers(data.players);
+      setFranchises(data.franchises);
+      setAvailableTeams(data.availableTeams);
     });
 
     socket.on("auction_started", (data) => {
       setAuctionStarted(true);
       setCurrentPlayer(data.currentPlayer);
       setCurrentBid(data.currentBid);
-      setHighestBidder(data.highestBidder || "");
-      setHighestBidderFranchise(data.highestBidderFranchise || "");
-      setFranchises(data.franchises || {});
-      setPinnedMessage("");
-      setPinnedFranchise("");
-      setFeedMessages([]);
-      setTimer(7);
-      setMessage("Auction has started!");
-      addFeedMessage(`Auction started! First up: ${data.currentPlayer.name}`, "system");
+      setHighestBidder(null);
+      setHighestBidderFranchise("");
+      setAuctionPlayers(data.auctionPlayers || []);
+      setCurrentPlayerIndex(data.currentPlayerIndex || 0);
+      addFeedMessage(`Auction started! Player: ${data.currentPlayer.name}`, "system");
     });
 
     socket.on("bid_updated", (data) => {
-      setCurrentPlayer(data.currentPlayer);
       setCurrentBid(data.currentBid);
-      setHighestBidder(data.highestBidder || "");
-      setHighestBidderFranchise(data.highestBidderFranchise || "");
-      setFranchises(data.franchises || {});
+      setHighestBidder(data.highestBidder);
+      setHighestBidderFranchise(data.highestBidderFranchise);
+      
+      // Find the bidding player to get their username
+      const biddingPlayer = players.find(p => p.franchise === data.highestBidderFranchise);
+      const bidderUsername = biddingPlayer ? biddingPlayer.name : data.highestBidder;
+      
       addFeedMessage(
-        `${data.highestBidderFranchise} bid Rs.${data.currentBid} Cr for ${data.currentPlayer.name}`,
+        `${data.currentPlayer.name} - ₹${data.currentBid}Cr`,
         "bid",
-        data.highestBidderFranchise
+        data.highestBidderFranchise,
+        bidderUsername
       );
     });
 
-    socket.on("timer_update", (time) => {
-      setTimer(time);
+    socket.on("timer_update", (timeLeft) => {
+      setTimer(timeLeft);
     });
 
     socket.on("player_sold", (data) => {
-      const msg = `${data.player} (${data.role}) sold to ${data.winner} for Rs.${data.price} Cr`;
-      setPinnedMessage(msg);
+      const message = `${data.player} - ₹${data.price}Cr`;
+      addFeedMessage(message, "sold", data.winner);
+      setPinnedMessage(`${data.player} sold to ${data.winner} for ₹${data.price}Cr`);
       setPinnedFranchise(data.winner);
       setFranchises(data.franchises || {});
-      addFeedMessage(`SOLD! ${msg}`, "sold");
     });
 
     socket.on("player_unsold", (data) => {
-      const msg = `${data.player} went unsold`;
-      setPinnedMessage(msg);
-      setPinnedFranchise("");
-      addFeedMessage(`UNSOLD: ${data.player}`, "unsold");
+      addFeedMessage(`${data.player} went unsold`, "unsold");
     });
 
     socket.on("next_player_started", (data) => {
       setCurrentPlayer(data.currentPlayer);
       setCurrentBid(data.currentBid);
-      setHighestBidder(data.highestBidder || "");
-      setHighestBidderFranchise(data.highestBidderFranchise || "");
-      setFranchises(data.franchises || {});
+      setHighestBidder(null);
+      setHighestBidderFranchise("");
       setPinnedMessage("");
-      setPinnedFranchise("");
-      setTimer(7);
-      addFeedMessage(
-        `Next up: ${data.currentPlayer.name} (Base: Rs.${data.currentBid} Cr)`,
-        "system"
-      );
+      setCurrentPlayerIndex(data.currentPlayerIndex || 0);
+      setAuctionPlayers(data.auctionPlayers || []);
+      addFeedMessage("NEXT_PLAYER:" + data.currentPlayer.name, "system");
     });
 
-    socket.on("auction_finished", (data) => {
+    socket.on("auction_finished", () => {
       setAuctionStarted(false);
-      setCurrentPlayer(null);
-      setFranchises(data?.franchises || {});
-      setMessage("Auction finished!");
-      setPinnedMessage("");
       setPinnedFranchise("");
       addFeedMessage("Auction has ended!", "system");
     });
@@ -284,6 +300,7 @@ function App() {
       return;
     }
     socket.emit("create_room", { username: username.trim(), franchise: selectedFranchise });
+    setRoomCode("");
   };
 
   const joinRoom = () => {
@@ -301,6 +318,11 @@ function App() {
   const startAuction = () => socket.emit("start_auction", joinedRoom);
   const placeBid = () => socket.emit("place_bid", { roomCode: joinedRoom });
   const nextPlayer = () => socket.emit("next_player", joinedRoom);
+  const sendChatMessage = (chatMessage) => {
+    const franchise = currentFranchise || selectedFranchise;
+    setChatMessages((prev) => [...prev, { ...chatMessage, franchise }]);
+    setChatInput("");
+  };
 
   const getFeedBubbleStyle = (type, franchise = "") => {
     const base = {
@@ -310,17 +332,27 @@ function App() {
       fontSize: "14px",
       lineHeight: "1.4",
     };
-    if (type === "bid" && franchise && TEAM_THEMES[franchise]) {
+    if ((type === "bid" || type === "sold") && franchise && TEAM_THEMES[franchise]) {
       const theme = TEAM_THEMES[franchise];
       return {
         ...base,
-        background: `linear-gradient(135deg, ${theme.color}22, ${theme.secondaryColor}22)`,
-        borderLeft: `3px solid ${theme.color}`,
-        borderRight: `3px solid ${theme.secondaryColor}`,
+        background: `linear-gradient(135deg, ${theme.color}33, ${theme.secondaryColor}33)`,
+        borderLeft: `4px solid ${theme.color}`,
+        borderRight: `4px solid ${theme.secondaryColor}`,
         color: "white",
       };
     }
-    if (type === "sold") return { ...base, background: "#1a3a1a", borderLeft: "3px solid #28a745" };
+    if (type === "celebration" && franchise && TEAM_THEMES[franchise]) {
+      const theme = TEAM_THEMES[franchise];
+      return {
+        ...base,
+        background: `linear-gradient(135deg, ${theme.color}33, ${theme.secondaryColor}33)`,
+        borderLeft: `4px solid ${theme.color}`,
+        borderRight: `4px solid #FFD700`,
+        color: "white",
+        fontStyle: "italic",
+      };
+    }
     if (type === "unsold") return { ...base, background: "#3a1a1a", borderLeft: "3px solid #dc3545" };
     return { ...base, background: "#2a2a2a", borderLeft: "3px solid #888" };
   };
@@ -342,7 +374,7 @@ function App() {
   });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0b1020", color: "white", fontFamily: "Arial, sans-serif", padding: "20px" }}>
+    <div style={{ minHeight: "100vh", background: "#0b1020", color: "white", fontFamily: "'Poppins', sans-serif", padding: "20px" }}>
       <h1 style={{ fontSize: "48px", marginBottom: "10px", textAlign: "center" }}>IPL Auction App</h1>
       <p style={{ textAlign: "center", fontSize: "18px" }}><strong>Status:</strong> {message}</p>
 
@@ -388,153 +420,31 @@ function App() {
 
       {joinedRoom && (
         <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr 1fr", gap: "24px", maxWidth: "1600px", margin: "30px auto 0", alignItems: "start" }}>
-
-          {/* LEFT: Room info + Auction */}
           <div>
-            <div style={{ background: "#11182c", border: "1px solid #444", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
-              <p style={{ fontSize: "22px" }}><strong>Joined Room:</strong> {joinedRoom}</p>
-              <p style={{ fontSize: "22px" }}><strong>Players Joined:</strong> {players.length}/10</p>
+            <div style={{ background: "#11182c", border: "1px solid #444", borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
+              <p style={{ fontSize: "14px", margin: "4px 0" }}><strong>Joined Room:</strong> {joinedRoom}</p>
+              <p style={{ fontSize: "14px", margin: "8px 0" }}><strong>Players Joined:</strong> {players.length}/10</p>
 
-              {/* Tabs */}
               <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid #333", paddingBottom: "10px", marginBottom: "16px", marginTop: "16px" }}>
-                <button onClick={() => setActiveTab("activity")} style={tabStyle("activity")}>
-                  Activity <span style={{ background: "#333", borderRadius: "10px", padding: "1px 7px", fontSize: "12px" }}>{feedMessages.length}</span>
+                <button onClick={() => setActiveTab("players")} style={tabStyle("players")}>
+                  Players <span style={{ background: "#333", borderRadius: "10px", padding: "1px 7px", fontSize: "12px" }}>{players.length}/10</span>
                 </button>
-                <button onClick={() => setActiveTab("squad")} style={tabStyle("squad")}>
-                  Squad <span style={{ background: "#333", borderRadius: "10px", padding: "1px 7px", fontSize: "12px" }}>{players.length}</span>
-                </button>
-                <button onClick={() => setActiveTab("community")} style={tabStyle("community")}>Community</button>
                 <button onClick={() => setActiveTab("settings")} style={tabStyle("settings")}>Settings</button>
               </div>
 
-              {/* Squad Tab */}
-              {activeTab === "squad" && (
-                <div>
-                  {players.map((player) => {
-                    const theme = TEAM_THEMES[player.franchise];
-                    const isExpanded = expandedPlayer === player.id;
-                    const isPlayerHost = player.id === hostId;
-                    const franchiseData = franchises[player.franchise];
-                    return (
-                      <div
-                        key={player.id}
-                        style={{ borderBottom: "1px solid #222", paddingBottom: "12px", marginBottom: "12px" }}
-                      >
-                        <div
-                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
-                          onClick={() => setExpandedPlayer(isExpanded ? null : player.id)}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#28a745", flexShrink: 0 }} />
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <span style={{ fontWeight: "bold", fontSize: "16px" }}>{player.name}</span>
-                                {isPlayerHost && (
-                                  <span style={{ background: "#5a2d8a", color: "white", fontSize: "10px", padding: "2px 7px", borderRadius: "4px", fontWeight: "bold" }}>HOST</span>
-                                )}
-                              </div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
-                                <span style={{
-                                  background: theme?.abbrBg || "#333",
-                                  color: theme?.abbrText || "white",
-                                  fontSize: "10px",
-                                  fontWeight: "bold",
-                                  padding: "4px 8px",
-                                  borderRadius: "4px",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "4px",
-                                }}>
-                                  {theme?.logo && (
-                                    <img src={theme.logo} alt={player.franchise} style={{ width: "14px", height: "14px", objectFit: "contain" }} />
-                                  )}
-                                  {theme?.abbr || "?"}
-                                </span>
-                                <span style={{ fontSize: "13px", color: "#aaa" }}>{player.franchise}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <span style={{ color: "#aaa", fontSize: "18px" }}>{isExpanded ? "∧" : "∨"}</span>
-                        </div>
-
-                        {isExpanded && franchiseData && (
-                          <div style={{ marginTop: "10px", paddingLeft: "20px" }}>
-                            <p style={{ fontSize: "13px", color: "#ccc", margin: "4px 0" }}>
-                              Purse: Rs.{franchiseData.purse.toFixed(2)} Cr
-                            </p>
-                            <p style={{ fontSize: "13px", color: "#ccc", margin: "4px 0" }}>
-                              Players bought: {franchiseData.players.length}
-                            </p>
-                            {franchiseData.players.length > 0 && (
-                              <div style={{ margin: "12px 0" }}>
-                                {["Batsman", "Wicketkeeper", "Bowler", "All-Rounder"].map((role) => {
-                                  const playersInRole = franchiseData.players.filter(p => p.role === role);
-                                  const roleColors = ROLE_COLORS[role];
-                                  if (playersInRole.length === 0) return null;
-                                  return (
-                                    <div key={role} style={{ marginBottom: "12px" }}>
-                                      <div style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                        marginBottom: "8px",
-                                        paddingBottom: "6px",
-                                        borderBottom: `1px solid ${roleColors.bg}33`,
-                                      }}>
-                                        <span style={{ fontSize: "18px" }}>{roleColors.emoji}</span>
-                                        <span style={{
-                                          background: roleColors.bg,
-                                          color: roleColors.text,
-                                          padding: "3px 8px",
-                                          borderRadius: "4px",
-                                          fontWeight: "bold",
-                                          fontSize: "11px",
-                                          textTransform: "uppercase",
-                                        }}>
-                                          {roleColors.abbr}
-                                        </span>
-                                        <span style={{ fontSize: "12px", color: "#999" }}>({playersInRole.length})</span>
-                                      </div>
-                                      {playersInRole.map((p, i) => (
-                                        <div key={`${role}-${i}`} style={{ display: "flex", alignItems: "center", gap: "8px", margin: "6px 0", fontSize: "12px", color: "#aaa", paddingLeft: "26px" }}>
-                                          <span>{roleColors.emoji}</span>
-                                          <span>{p.name}</span>
-                                          <span style={{ color: "#666" }}>—</span>
-                                          <span style={{ color: "#28a745", fontWeight: "bold" }}>Rs.{p.price} Cr</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {activeTab === "activity" && (
-                <div style={{ fontSize: "14px", color: "#aaa" }}>
-                  {feedMessages.length === 0 ? "No activity yet." : feedMessages.map((msg, i) => (
-                    <div key={i} style={{ marginBottom: "8px", color: "#ccc" }}>
-                      <span style={{ color: "#666", fontSize: "11px", marginRight: "6px" }}>{msg.time}</span>
-                      {msg.text}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === "community" && (
-                <p style={{ color: "#666", fontSize: "14px" }}>Community features coming soon.</p>
+              {activeTab === "players" && (
+                <PlayersTab
+                  players={players}
+                  hostId={hostId}
+                  expandedPlayer={expandedPlayer}
+                  onTogglePlayer={setExpandedPlayer}
+                />
               )}
 
               {activeTab === "settings" && (
                 <div style={{ fontSize: "14px", color: "#aaa" }}>
                   <p>Room Code: <strong style={{ color: "white" }}>{joinedRoom}</strong></p>
-                  <p>Your Franchise: <strong style={{ color: "white" }}>{selectedFranchise}</strong></p>
+                    <p>Your Franchise: <strong style={{ color: "white" }}>{currentFranchise || selectedFranchise}</strong></p>
                 </div>
               )}
 
@@ -548,182 +458,49 @@ function App() {
               )}
             </div>
 
-            {/* Auction Panel */}
-            {auctionStarted && currentPlayer && (
-              <div style={{ background: "#11182c", border: "1px solid #555", borderRadius: "12px", padding: "20px" }}>
-                <h2 style={{ color: "lime", fontSize: "30px" }}>Auction Live</h2>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-                  <h2 style={{ margin: 0 }}>{currentPlayer.name}</h2>
-                  {ROLE_COLORS[currentPlayer.role] && (
-                    <span style={{
-                      background: ROLE_COLORS[currentPlayer.role].bg,
-                      color: ROLE_COLORS[currentPlayer.role].text,
-                      padding: "6px 10px",
-                      borderRadius: "6px",
-                      fontWeight: "bold",
-                      fontSize: "14px",
-                      textTransform: "uppercase",
-                    }}>
-                      {currentPlayer.role}
-                    </span>
-                  )}
-                </div>
-                <p>Type: {currentPlayer.overseas}</p>
-                <p>Base Price: Rs.{currentPlayer.basePrice} Cr</p>
-                <p>Current Bid: Rs.{currentBid} Cr</p>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "6px 0" }}>
-                  {highestBidderFranchise && TEAM_THEMES[highestBidderFranchise]?.logo && (
-                    <img src={TEAM_THEMES[highestBidderFranchise].logo} alt={highestBidderFranchise} style={{ width: "28px", height: "28px", objectFit: "contain" }} />
-                  )}
-                  <p style={{ margin: 0 }}>Highest Bidder: {highestBidder || "No bids yet"}</p>
-                </div>
-
-                <p>Time Left: {timer}s</p>
-
-                {/* Pinned sold/unsold result */}
-                {pinnedMessage && (
-                  <div style={{
-                    background: pinnedTheme
-                      ? `linear-gradient(135deg, ${pinnedTheme.color}33, ${pinnedTheme.secondaryColor}33)`
-                      : "#2a2a2a",
-                    border: `1px solid ${pinnedTheme ? pinnedTheme.color : "#888"}`,
-                    borderRadius: "8px",
-                    padding: "10px 14px",
-                    margin: "10px 0",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                  }}>
-                    {pinnedTheme?.logo && (
-                      <img src={pinnedTheme.logo} alt={pinnedFranchise} style={{ width: "32px", height: "32px", objectFit: "contain", flexShrink: 0 }} />
-                    )}
-                    <span style={{ fontSize: "13px", fontWeight: "bold", color: pinnedTheme ? pinnedTheme.color : "#ccc" }}>
-                      {pinnedMessage}
-                    </span>
-                  </div>
-                )}
-
-                {highestBidderFranchise !== selectedFranchise && (
-                  <button
-                    onClick={placeBid}
-                    style={{ marginTop: "12px", marginRight: "10px", padding: "12px 24px", fontSize: "18px", background: "#007bff", color: "white", border: "none", cursor: "pointer", borderRadius: "8px" }}
-                  >
-                    Place Bid (+0.5 Cr)
-                  </button>
-                )}
-
-                {isHost && (
-                  <button
-                    onClick={nextPlayer}
-                    style={{ marginTop: "12px", padding: "12px 24px", fontSize: "18px", background: "#ff9800", color: "white", border: "none", cursor: "pointer", borderRadius: "8px" }}
-                  >
-                    Next Player
-                  </button>
-                )}
-              </div>
-            )}
+            <AuctionPanel
+              auctionStarted={auctionStarted}
+              currentPlayer={currentPlayer}
+              currentBid={currentBid}
+              highestBidder={highestBidder}
+              highestBidderFranchise={highestBidderFranchise}
+              timer={timer}
+              pinnedMessage={pinnedMessage}
+              pinnedTheme={pinnedTheme}
+              selectedFranchise={selectedFranchise}
+              roleColors={ROLE_COLORS}
+              teamThemes={TEAM_THEMES}
+              onPlaceBid={placeBid}
+              onNextPlayer={nextPlayer}
+              isHost={isHost}
+              currentPlayerIndex={currentPlayerIndex}
+              auctionPlayers={auctionPlayers}
+              currentFranchise={currentFranchise || selectedFranchise}
+            />
           </div>
 
-          {/* MIDDLE: Live Feed */}
           <div style={{ background: "#11182c", border: "1px solid #444", borderRadius: "12px", padding: "20px", display: "flex", flexDirection: "column", height: "600px" }}>
-            <h2 style={{ marginBottom: "12px", fontSize: "22px" }}>Live Feed</h2>
-
-            <div ref={feedRef} style={{ flex: 1, overflowY: "auto", paddingRight: "4px" }}>
-              {feedMessages.length === 0 && (
-                <p style={{ color: "#666", fontSize: "14px" }}>Waiting for auction to start...</p>
-              )}
-              {feedMessages.map((msg, index) => (
-                <div key={index} style={getFeedBubbleStyle(msg.type, msg.franchise)}>
-                  {msg.franchise && TEAM_THEMES[msg.franchise]?.logo && (
-                    <img src={TEAM_THEMES[msg.franchise].logo} alt={msg.franchise} style={{ width: "18px", height: "18px", objectFit: "contain", marginRight: "6px", verticalAlign: "middle" }} />
-                  )}
-                  <span style={{ color: "#aaa", fontSize: "11px", marginRight: "8px" }}>{msg.time}</span>
-                  {msg.text}
-                </div>
-              ))}
-            </div>
+            <h2 style={{ marginBottom: "12px", fontSize: "22px" }}>Chat</h2>
+            <ChatTab
+              feedMessages={feedMessages}
+              chatMessages={chatMessages}
+              chatInput={chatInput}
+              setChatInput={setChatInput}
+              onSendChat={sendChatMessage}
+              username={username}
+              selectedFranchise={currentFranchise || selectedFranchise}
+              teamThemes={TEAM_THEMES}
+            />
           </div>
 
-          {/* RIGHT: Franchise Table */}
-          <div style={{ background: "#11182c", border: "1px solid #444", borderRadius: "12px", padding: "20px", maxHeight: "600px", overflowY: "auto" }}>
-            <h2 style={{ marginBottom: "18px" }}>Franchise Table</h2>
-            {IPL_TEAMS.map((team) => {
-              const data = franchises[team];
-              const theme = TEAM_THEMES[team];
-              return (
-                <div key={team} style={{ marginBottom: "18px", paddingBottom: "12px", borderBottom: "1px solid #333" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
-                    {theme?.logo && (
-                      <div style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "50%",
-                        background: theme.color,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        border: `2px solid ${theme.secondaryColor}`,
-                      }}>
-                        <img src={theme.logo} alt={team} style={{ width: "28px", height: "28px", objectFit: "contain" }} />
-                      </div>
-                    )}
-                    <span style={{ fontWeight: "bold", fontSize: "16px", color: theme?.color || "white" }}>{team}</span>
-                  </div>
-                  <div style={{ fontSize: "14px", color: "#ccc" }}>
-                    Purse: Rs.{data ? data.purse.toFixed(2) : STARTING_PURSE.toFixed(2)} Cr
-                  </div>
-                  <div style={{ marginTop: "6px" }}>
-                    Players:
-                    {data && data.players.length > 0 ? (
-                      <table style={{ width: "100%", marginTop: "8px", borderCollapse: "collapse", fontSize: "13px" }}>
-                        <thead>
-                          <tr>
-                            <th style={{ textAlign: "left", borderBottom: "1px solid #555", paddingBottom: "4px" }}>Name</th>
-                            <th style={{ textAlign: "left", borderBottom: "1px solid #555", paddingBottom: "4px" }}>Role</th>
-                            <th style={{ textAlign: "left", borderBottom: "1px solid #555", paddingBottom: "4px" }}>Type</th>
-                            <th style={{ textAlign: "left", borderBottom: "1px solid #555", paddingBottom: "4px" }}>Price</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.players.map((player, index) => {
-                            const roleColors = ROLE_COLORS[player.role] || { bg: "#333", text: "#999", abbr: "?" };
-                            return (
-                              <tr key={`${team}-${index}`}>
-                                <td style={{ paddingTop: "4px" }}>{player.name}</td>
-                                <td style={{ paddingTop: "4px" }}>
-                                  <span style={{
-                                    background: roleColors.bg,
-                                    color: roleColors.text,
-                                    padding: "3px 8px",
-                                    borderRadius: "4px",
-                                    fontWeight: "bold",
-                                    fontSize: "11px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                    width: "fit-content",
-                                  }}>
-                                    <span>{roleColors.emoji}</span>
-                                    {roleColors.abbr}
-                                  </span>
-                                </td>
-                                <td style={{ paddingTop: "4px", fontSize: "12px", color: "#999" }}>{player.overseas}</td>
-                                <td style={{ paddingTop: "4px" }}>Rs.{player.price} Cr</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <span style={{ color: "#666" }}> None</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <FranchiseTable
+            franchises={franchises}
+            teamThemes={TEAM_THEMES}
+            startingPurse={STARTING_PURSE}
+            roleColors={ROLE_COLORS}
+            expandedFranchise={expandedFranchise}
+            onToggleFranchise={setExpandedFranchise}
+          />
         </div>
       )}
     </div>

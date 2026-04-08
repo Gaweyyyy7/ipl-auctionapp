@@ -144,6 +144,8 @@ function startTimer(roomCode) {
           highestBidder: null,
           highestBidderFranchise: null,
           franchises: updatedRoom.franchises,
+          currentPlayerIndex: updatedRoom.currentPlayerIndex,
+          auctionPlayers: auctionPlayers,
         });
 
         startTimer(roomCode);
@@ -201,6 +203,7 @@ io.on("connection", (socket) => {
       roomCode,
       players: rooms[roomCode].players,
       hostId: socket.id,
+        franchise: cleanFranchise,
       availableTeams: getAvailableTeams(rooms[roomCode]),
       franchises: rooms[roomCode].franchises,
     });
@@ -254,6 +257,7 @@ io.on("connection", (socket) => {
       roomCode,
       players: room.players,
       hostId: room.host,
+        franchise: cleanFranchise,
       availableTeams: getAvailableTeams(room),
       franchises: room.franchises,
     });
@@ -287,6 +291,8 @@ io.on("connection", (socket) => {
       highestBidder: null,
       highestBidderFranchise: null,
       franchises: room.franchises,
+      auctionPlayers: auctionPlayers,
+      currentPlayerIndex: 0,
     });
 
     startTimer(roomCode);
@@ -358,6 +364,8 @@ io.on("connection", (socket) => {
       highestBidder: null,
       highestBidderFranchise: null,
       franchises: room.franchises,
+      currentPlayerIndex: room.currentPlayerIndex,
+      auctionPlayers: auctionPlayers,
     });
 
     startTimer(roomCode);
